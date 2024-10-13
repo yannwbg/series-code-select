@@ -105,6 +105,11 @@ print(df_constant_4_int.head(10))
 
 df_constant_4_int.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/Constant_4_intermediate.csv")
 
-###Need to check the following:
-## Footnote 42, 48, and 29 (Refers to GDP)
-## check randonmy if the calculations are correct.
+#small issues:
+## Footnote 42, 48, and 49 (Refers to GDP) checked.
+#### Monaco: Year 2010-2012, series 100, base year 2005, has b1.g with Footnote 42, all other category (from f-R+S+T) with footnote 8 (At producer’s price)
+####Philippines: 100, base 2000, 2000-2012. Other sectors has no footnote (2009-2012) or only D marked footnote 1 (2000-2008)
+## ISO3 has not been appended yet.
+
+
+## have already checked randonmyly to see if the calculations are correct.
