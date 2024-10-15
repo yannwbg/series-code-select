@@ -96,6 +96,9 @@ print(df_current_4_int.head(10))
 
 df_current_4_int.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/Current_4_intermediate.csv")
 
+df_current_4_int = df_current_4_int.iloc[:,0:3]
+print(df_current_4_int.head())
+df_current_4_int.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/Current_4_3cols.csv")
 
 ###small issues:
 ###1)Footnote 42 & 43 Refers to Gross Domestic Product. Philippines: For B.1g marked 42 & 43, the other sectors marked 19. However, for series 100, 2000-2012, sector D 2001-2008 marked 1, all other sectors has no footnote.
