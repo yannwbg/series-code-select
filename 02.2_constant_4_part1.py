@@ -105,6 +105,10 @@ print(df_constant_4_int.head(10))
 
 df_constant_4_int.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/Constant_4_intermediate.csv")
 
+df_constant_4_int = df_constant_4_int.iloc[:,0:4]
+print(df_constant_4_int.head())
+df_constant_4_int.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/Constant_4_4cols.csv")
+
 #small issues:
 ## Footnote 42, 48, and 49 (Refers to GDP) checked.
 #### Monaco: Year 2010-2012, series 100, base year 2005, has b1.g with Footnote 42, all other category (from f-R+S+T) with footnote 8 (At producer’s price)

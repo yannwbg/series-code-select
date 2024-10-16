@@ -106,7 +106,7 @@ print(distribution)
 print(pivot_df_current_4.tail(10))
 
 pivot_df_current_4['overlap'] = None
-# From bottom up. for the same country, if final_series are different for row i and i-1
+# From bottom up. for the same country, if final_series are different for row i and i+1
 for i in range(len(pivot_df_current_4) - 2, -1, -1):  # start from second last one to the first row
     if pivot_df_current_4.loc[i, 'country'] == pivot_df_current_4.loc[i+1, 'country'] and pivot_df_current_4.loc[i, 'final_series'] != pivot_df_current_4.loc[i + 1, 'final_series']: #same country but different final_series (a switch)
         this_col = pivot_df_current_4.loc[i, 'final_series']
