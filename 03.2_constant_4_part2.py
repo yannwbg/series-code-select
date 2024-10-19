@@ -167,9 +167,22 @@ pivot_df_constant_4['final_series'] = pivot_df_constant_4['final_series'].astype
 pivot_df_constant_4.reset_index(drop=True, inplace=True)
 print(pivot_df_constant_4.tail(10))
 
+### Gap check
+pivot_df_constant_4 = pivot_df_constant_4.sort_values(by=['country','base','year'])
+pivot_df_constant_4['year_diff'] = pivot_df_constant_4.groupby(['country','base'])['year'].diff()
+pivot_df_constant_4['has_gap'] = pivot_df_constant_4['year_diff']>1
+#countries_with_gaps = pivot_df_constant_4[pivot_df_constant_4['has_gap']][['country','base']].unique()
+gap_counts = pivot_df_constant_4.groupby(['country','base']).apply(lambda x: x['has_gap'].sum()).reset_index(name = 'gap_count')
+gaps_info = gap_counts[gap_counts['gap_count']>0]
+print(gap_counts)
+print(gaps_info)
+#There are several country & base year combination with gaps.
+
+
 pivot_df_constant_4.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/constant_4_4final.csv")
 
 df_constant_4_final = pivot_df_constant_4[['country','year','base','final_series','overlap']]
 print(df_constant_4_final.head())
 df_constant_4_final.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Final/constant_4_final.csv")
 
+### Need to know how to fix the gap issue.

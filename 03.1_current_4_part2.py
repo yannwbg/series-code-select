@@ -147,6 +147,15 @@ pivot_df_current_4['final_series'] = pivot_df_current_4['final_series'].astype(i
 pivot_df_current_4.reset_index(drop=True, inplace=True)
 print(pivot_df_current_4.tail(10))
 
+### Gap check
+pivot_df_current_4 = pivot_df_current_4.sort_values(by=['country','year'])
+pivot_df_current_4['year_diff'] = pivot_df_current_4.groupby('country')['year'].diff()
+pivot_df_current_4['has_gap'] = pivot_df_current_4['year_diff']>1
+countries_with_gaps = pivot_df_current_4[pivot_df_current_4['has_gap']]['country'].unique()
+num_countries_with_gaps = len(countries_with_gaps)
+print(f' There are {num_countries_with_gaps} countries have year gaps, including: {countries_with_gaps}')
+#There are 4 countries have year gaps, including: ['Iran, Islamic Rep.' 'Mauritania' 'Namibia' 'Rwanda']
+
 pivot_df_current_4.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/current_4_4final.csv")
 
 df_current_4_final = pivot_df_current_4[['country','year','final_series','overlap']]
@@ -155,6 +164,7 @@ df_current_4_final.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Final
 
 
 
+#### NEED to check for the gap country question.
 
 
 
