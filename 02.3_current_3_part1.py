@@ -124,9 +124,9 @@ def calculate_missing_combination3(df, col1, col2, col3, col_sum, new_col_name):
 # Apply the function with specific column names and the new column name 'missing_AB'
 pivot_df_current_3 = calculate_missing_combination3(pivot_df_current_3, 'M', 'N', 'O', 'M+N+O', 'missing_MNO')
 
-## Then check all the other sectors: C, D, E, F, I, L, P
-columns_to_check = ['C', 'D', 'E', 'F', 'I', 'L', 'P']
-pivot_df_current_3['missing_other'] = pivot_df_current_3[columns_to_check].isna().any(axis=1)
+## Then check all the other sectors: C, D, E, F, I, L. Please not sector P can be missing, so not included.
+columns_to_check = ['C', 'D', 'E', 'F', 'I', 'L']
+pivot_df_current_3['missing_other_exclP'] = pivot_df_current_3[columns_to_check].isna().any(axis=1)
 
 ## Combine them and get the final results  : if any sector is missing
 pivot_df_current_3['missing_any_sector'] = pivot_df_current_3.iloc[:, -5:].any(axis=1)
@@ -240,7 +240,7 @@ for index in range(len(pivot_df_current_3)):
 ### Save a copy of current discard column, without considering the number of sectors.
 pivot_df_current_3['discard_nc_Nsector'] = pivot_df_current_3['discard']
 
-# If there is any missing sector, then discard. Otherwise,  do not discard.
+# If there is any missing sector, then discard. Otherwise,  do not discard. (P can be missing)
 conditions = pivot_df_current_3['missing_any_sector'] == True
 pivot_df_current_3.loc[conditions, 'discard'] = True
 print(pivot_df_current_3.head(10))
