@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import re
 pd.set_option('display.max_columns', None)
 #
 # df_constant_3 = pd.read_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Data_original/cleaned/un4_constant.csv")
@@ -70,8 +71,61 @@ def update_dataframe3(df, col1, col2, col3, col_sum):
 pivot_df_constant_3 = update_dataframe3(pivot_df_constant_3, 'M', 'N', 'O','M+N+O')
 print(pivot_df_constant_3.tail())
 
+### Add columns to check if there's any sectors missing.
+## First figure out if AB, GH, JK are missing
+def calculate_missing_combination(df, col1, col2, col_sum, new_col_name):
+    """
+    Function to calculate a new column based on conditions involving two columns and their sum.
 
-#Aggregate the footnote colum to check for any footnotes
+    Parameters:
+    - df (DataFrame): The DataFrame to operate on.
+    - col1 (str): The name of the first column.
+    - col2 (str): The name of the second column.
+    - col_sum (str): The name of the column representing the sum or combination of the first two columns.
+    - new_col_name (str): The name of the new column to be added to indicate missing status.
+
+    Returns:
+    - DataFrame: The DataFrame with the new column added.
+    """
+    # Calculate conditions
+    condition1 = df[col1].notna() & df[col2].notna() & df[col_sum].isna()
+    condition2 = df[col_sum].notna()
+
+    # Determine the new column should be False
+    df[new_col_name] = ~(condition1 | condition2)
+
+    return df
+
+# Apply the function with specific column names and the new column name 'missing_AB'
+pivot_df_constant_3 = calculate_missing_combination(pivot_df_constant_3, 'A', 'B', 'A+B', 'missing_AB')
+pivot_df_constant_3 = calculate_missing_combination(pivot_df_constant_3, 'G', 'H', 'G+H', 'missing_GH')
+pivot_df_constant_3 = calculate_missing_combination(pivot_df_constant_3, 'J', 'K', 'J+K', 'missing_JK')
+
+## Then figure out if MNO are missing
+def calculate_missing_combination3(df, col1, col2, col3, col_sum, new_col_name):
+    """Function to calculate a new column based on conditions involving 3 columns and their sum."""
+    # Calculate conditions
+    condition1 = df[col1].notna() & df[col2].notna() & df[col3].notna() & df[col_sum].isna()
+    condition2 = df[col_sum].notna()
+
+    # Determine the new column should be False
+    df[new_col_name] = ~(condition1 | condition2)
+
+    return df
+# Apply the function with specific column names and the new column name 'missing_AB'
+pivot_df_constant_3 = calculate_missing_combination3(pivot_df_constant_3, 'M', 'N', 'O', 'M+N+O', 'missing_MNO')
+
+## Then check all the other sectors: C, D, E, F, I, L, P
+columns_to_check = ['C', 'D', 'E', 'F', 'I', 'L', 'P']
+pivot_df_constant_3['missing_other'] = pivot_df_constant_3[columns_to_check].isna().any(axis=1)
+
+## Combine them and get the final results  : if any sector is missing
+pivot_df_constant_3['missing_any_sector'] = pivot_df_constant_3.iloc[:, -5:].any(axis=1)
+#print(pivot_df_constant_3.head(10))
+#print(pivot_df_constant_3.tail(10))
+
+
+###Aggregate the footnote colum to check for any footnotes
 #print(df_constant_3['note'].dtype) #object
 footnotes = df_constant_3.groupby(['country','year','series_code','base'])['note'].agg(lambda x: ', '.join(set(y for y in x if pd.notna(y) and y != '')))
 
@@ -94,22 +148,14 @@ def missing_column(row):
 pivot_df_constant_3['sector_missing']= pivot_df_constant_3.loc[:, 'A':'P'].apply(missing_column, axis=1)
 print(pivot_df_constant_3.head(10))
 
-# # reset year and series into integer
-# pivot_df_constant_3['year'] = pivot_df_constant_3['year'].astype(int)
-# pivot_df_constant_3['series_code'] = pivot_df_constant_3['series_code'].astype(int)
-# #print(pivot_df_constant_3.head(10))
 
-# calculate the discard score
+### calculate the discard score
 columns_to_sum = list(range(4,7))+list(range(9,26))
 pivot_df_constant_3['sum_of_sector'] = pivot_df_constant_3.iloc[:,columns_to_sum].sum(axis=1)
 pivot_df_constant_3['score'] = ((pivot_df_constant_3['sum_of_sector'] - pivot_df_constant_3['B.1g'])/pivot_df_constant_3['B.1g']).abs()
 pivot_df_constant_3['discard'] = (pivot_df_constant_3['score']-0.005)>=0
 print(pivot_df_constant_3.head(10))
 
-# # if b.1g is empty, do not discard. (discard = false)
-# for index in range(len(pivot_df_constant_3)):
-#     if pd.isna(pivot_df_constant_3.loc[index, 'B.1g']):  # Check if the value in A is NaN (or None)
-#         pivot_df_constant_3.loc[index, 'discard'] = False     # Set B to False if A is empty
 
 # if b.1g is missing and b.1*g is missing, do not discard. (discard = false)
 for index in range(len(pivot_df_constant_3)):
@@ -127,7 +173,7 @@ filtered_df = pivot_df_constant_3[pd.isna(pivot_df_constant_3['B.1g']) & pd.notn
 print(filtered_df) #258 rows *32 columns
 # pd.notna(pivot_df_constant_3['Footnotes'] seems not work
 
-filtered_df.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/constant_3_filtered_for_b1g.csv")
+filtered_df.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/un3_constant_filtered_for_b1g.csv")
 # Need to check manually for the footnote.
 
 # Went through the file and did not see the related footnote. So will use b1*g and 10%.
@@ -142,56 +188,96 @@ for index in range(len(pivot_df_constant_3)):
     if pivot_df_constant_3.loc[index, 'sum_of_sector'] ==0:  # meaning no sector value at all. This only happens in ISICC3 files.
         pivot_df_constant_3.loc[index, 'discard'] = True
 
-pivot_df_constant_3.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/constant_3_try.csv")
+# #pivot_df_constant_3.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/constant_3_try.csv")
+#
+#
+### FISIM
+# There are two types of FISIM related footnotes, one type notes FISIM is included, the other type notes FISIM is excluded.
+
+## Add a column FISIM, to show whether FISIM is included for B1g or excluded from B1g.
+df_constant_3_fisim = pd.read_csv('/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/constant_3_fisim.csv')
+
+# Convert 'note_code' to string in df2 for easier inclusion checks
+df_constant_3_fisim['note_code_str'] = df_constant_3_fisim['note_code'].astype(str)
+
+# Function to check for exact matches of note_code in notes
+def match_notes(row, df2):
+    relevant_rows = df2[df2['part'] == row['part']]
+    notes = row['Footnotes']
+    for _, df2_row in relevant_rows.iterrows():
+        # Use regular expressions to find exact matches
+        pattern = r'\b' + re.escape(df2_row['note_code_str']) + r'\b'  # \b denotes a word boundary
+        if re.search(pattern, notes):
+            return df2_row['FISIM']
+    return 'No Match'
+
+# Apply this function across df1
+pivot_df_constant_3['FISIM'] = pivot_df_constant_3.apply(match_notes, axis=1, args=(df_constant_3_fisim,))
+print(pivot_df_constant_3.head(10))
+#pivot_df_constant_3.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/constant_3_try.csv")
+
+print(pivot_df_constant_3['FISIM'].describe())
+
+for index in range(len(pivot_df_constant_3)):
+    if pivot_df_constant_3.loc[index, 'FISIM'] == 'exclude':
+        if pivot_df_constant_3.loc[index, 'sum_of_sector'] < pivot_df_constant_3.loc[index, 'B.1g']:
+            pivot_df_constant_3.loc[index, 'discard'] = True
+        else:
+            pivot_df_constant_3.loc[index, 'discard'] = (pivot_df_constant_3.loc[index, 'score'] - 0.075) >= 0
 
 
-# # FISIM
-# # check if footnote 7 and footnote 37 is included.
-# pivot_df_constant_3['footnote_7'] = pivot_df_constant_3['Footnotes'].str.contains(r'\b7\b', na=False)
-# pivot_df_constant_3['footnote_37'] = pivot_df_constant_3['Footnotes'].str.contains('37', na=False)
-#
+    if pivot_df_constant_3.loc[index, 'FISIM'] == 'include':
+        if pivot_df_constant_3.loc[index, 'sum_of_sector'] > pivot_df_constant_3.loc[index,'B.1g']:
+            pivot_df_constant_3.loc[index, 'discard'] = True
+        else:
+            pivot_df_constant_3.loc[index, 'discard'] = (pivot_df_constant_3.loc[index, 'score'] - 0.075) >= 0
 
-# #Footnote 7. The value of financial intermediation services indirectly measured (FISIM) is deducted from gross value added. (Only show in category B1.g)
-# #If the sum of the sectors are smaller than b1.g, then there’s an issue. Discard.
-# #If the sum of the sectors are bigger than b1.g, then use the 0.075 threshold.
-#
-# #Footnote 37. includes financial intermediation services indirectly measured (FISIM) of the Total Economy. (Only show in category B1.g)
-# #If the sum of the sectors are bigger than b1.g, then there’s an issue. Discard.
-# #If the sum of the sectors are smaller than b1.g, then use the 0.075 threshold.
-#
-# for index in range(len(pivot_df_constant_3)):
-#     if pivot_df_constant_3['footnote_7'] is True:
-#         if pivot_df_constant_3['sum_of_sector'] < pivot_df_constant_3['B.1g']:
-#             pivot_df_constant_3.loc[index, 'discard'] = True
-#         else:
-#             pivot_df_constant_3['discard'] = (pivot_df_constant_3['score'] - 0.075) >= 0
-#
-#
-#     if pivot_df_constant_3['footnote_37'] is True:
-#         if pivot_df_constant_3['sum_of_sector'] > pivot_df_constant_3['B.1g']:
-#             pivot_df_constant_3.loc[index, 'discard'] = True
-#         else:
-#             pivot_df_constant_3['discard'] = (pivot_df_constant_3['score'] - 0.075) >= 0
-#
-# #print(pivot_df_constant_3.head(10))
-#
+#print(pivot_df_constant_3.head(10))
+
+
+# Save a copy of current discard column, without considering the number of sectors.
+pivot_df_constant_3['discard_nc_Nsector'] = pivot_df_constant_3['discard']
+
+# If there is any missing sector, then discard. Otherwise,  do not discard.
+conditions = pivot_df_constant_3['missing_any_sector'] == True
+pivot_df_constant_3.loc[conditions, 'discard'] = True
+print(pivot_df_constant_3.head(10))
+
+### Final Data Clean and Export
+# reset year and series into integer
+pivot_df_constant_3['year'] = pivot_df_constant_3['year'].astype(int)
+pivot_df_constant_3['series_code'] = pivot_df_constant_3['series_code'].astype(int)
+#print(pivot_df_constant_3.head(10))
+
 #Our period of interest is 1990 – 2023.
 pivot_df_constant_3 = pivot_df_constant_3[(pivot_df_constant_3['year']>=1990) & (pivot_df_constant_3['year']<=2023)]
 
+# Merge iso3
+iso_mapping_current_3 = pd.read_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/iso_mapping_current_3.csv")
+pivot_df_constant_3 = pd.merge(pivot_df_constant_3, iso_mapping_current_3, on='country', how='left')
+
 #export the pivot table dataframe to a csv file
 print(pivot_df_constant_3.head(10))
-pivot_df_constant_3.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/constant_3_Sectorvalue.csv")
+pivot_df_constant_3.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/un3_constant_Sectorvalue.csv")
 
+# Keep only those not discarded.
 df_constant_3_int = pivot_df_constant_3[pivot_df_constant_3['discard']== False]
-df_constant_3_int.drop(columns='discard', inplace=True)
+#df_constant_3_int.drop(columns='discard', inplace=True)
 print(df_constant_3_int.head(10))
+df_constant_3_int.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/un3_constant_intermediate.csv")
 
-df_constant_3_int.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/constant_3_intermediate.csv")
+# Keep those discarded in a seperate file
+df_constant_3_int_discard = pivot_df_constant_3[pivot_df_constant_3['discard'] == True]
+#df_constant_3_int.drop(columns='discard', inplace=True)
+print(df_constant_3_int_discard.head(10))
+df_constant_3_int_discard.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/un3_constant_intermediate_discard.csv")
 
-df_constant_3_int = df_constant_3_int.iloc[:,0:4]
+# Export a file that only contains country, year, series_code, and iso3.
+#df_constant_3_int = df_constant_3_int.iloc[:,0:4]
+df_constant_3_int = pd.concat([df_constant_3_int.iloc[:,0:4],df_constant_3_int.iloc[:,-1: ]], axis=1)
 print(df_constant_3_int.head())
-df_constant_3_int.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/constant_3_4cols.csv")
+df_constant_3_int.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/un3_constant_5cols.csv")
 
-# ### issues:
-# ###1) GDP footntoes
-# ###2) FISIM not appliaed yet.
+# # ### issues:
+# # ###1) GDP footntoes
+# # ###2) FISIM not appliaed yet.
