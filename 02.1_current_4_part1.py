@@ -21,10 +21,6 @@ iso_mapping.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/iso_
 #Create a pivot table for the values, all sectors became column numbers
 pivot_df_current_4 = df_current_4.pivot_table(index=['country','year','series_code'], columns='code', values = 'value')
 
-#pivot_df_current_4 = df_current_4.pivot_table(index=['iso3', 'country','year','series_code'], columns='code', values = 'value')
-# When using this line of code, the results become different. Why?
-# We can add the iso3 column using a mapping table later.
-
 #Aggregate the footnote colum to check for any footnotes
 #print(df_current_4['note'].dtype) #object
 footnotes = df_current_4.groupby(['country','year','series_code'])['note'].agg(lambda x: ', '.join(set(y for y in x if pd.notna(y) and y != '')))
@@ -32,7 +28,8 @@ footnotes = df_current_4.groupby(['country','year','series_code'])['note'].agg(l
 #Reset the index to make 'country','year','series_code' into columns
 pivot_df_current_4.reset_index(inplace=True)
 
-# The footnotes series_code needs to have its index reset for joining. Then add it to the pivot table.
+# The footnotes series_code needs to have its index reset for joining. Then add it
+# to the pivot table.
 footnotes = footnotes.reset_index()
 footnotes.rename(columns={'note':'Footnotes'}, inplace=True)
 pivot_df_current_4 = pivot_df_current_4.merge(footnotes, on=['country','year','series_code'], how='left')
@@ -108,6 +105,7 @@ pivot_df_current_4['discard_nc_Nsector'] = pivot_df_current_4['discard']
 conditions = (pivot_df_current_4['n_sectors'] < 15) & (pivot_df_current_4['only_DorE_missing'] == False)
 pivot_df_current_4.loc[conditions, 'discard'] = True
 
+### Final Data Clean and Export
 #Our period of interest is 1990 – 2023.
 pivot_df_current_4 = pivot_df_current_4[(pivot_df_current_4['year']>=1990) & (pivot_df_current_4['year']<=2023)]
 
