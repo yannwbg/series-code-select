@@ -4,7 +4,7 @@ import numpy as np
 pd.set_option('display.max_columns', None)
 
 #### Read the file
-filepath = "/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/Current_4_3cols.csv"
+filepath = "/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/un4_current_4cols.csv"
 
 df_current_4 = pd.read_csv(filepath, index_col=None)
 print(df_current_4.head())
@@ -20,16 +20,16 @@ pivot_df_current_4 = df_current_4.pivot_table(index=['country','year'], columns=
 
 ####Reset the index to make 'country' into columns
 pivot_df_current_4.reset_index(inplace=True)
+# print(pivot_df_current_4.head())
 # Now you have a new dataframe with columns country, year, 100, 200 300, 400 500, 1000, 1100
 
 ### Add a column count, to show how many valid series options are there.
 pivot_df_current_4['count'] = pivot_df_current_4.iloc[:,2:9].sum(axis=1)
 #print(pivot_df_current_4['count'].describe()) #until 75% the numer is still 1. max is 3.
-
-print(pivot_df_current_4.head(10))
+#print(pivot_df_current_4.head(10))
 # Now you have a new dataframe with columns country, year, 100, 200 300, 400 500, 1000, 1100, count.
 
-###Add a column, to put the highest sereis value in this column.
+### Add a column, to put the highest sereis value in this column.
 #List of columns to check
 columns_to_check = [100, 200, 300, 400, 500, 1000, 1100]
 
@@ -51,29 +51,29 @@ pivot_df_current_4['highest_series'] = pivot_df_current_4.apply(get_highest_non_
 for col in columns_to_check:
     pivot_df_current_4.loc[(pivot_df_current_4['count'] == 1) & (pivot_df_current_4[col] == 1), 'final_series'] = col
 
-print(pivot_df_current_4.head(10))
+#print(pivot_df_current_4.head(10))
 
 ## When count is over 1, we want minimum switch
 # First from bottom up. Forward checking with next row, if same country and the next row has a series choosen, then use the same sereis if also have the same sereis..
 for i in range(len(pivot_df_current_4) - 2, -1, -1):  # start from second last to the first row
-    if pd.isna(pivot_df_current_4.loc[i, 'final_series']) and pivot_df_current_4.loc[i, 'count'] > 1: # if in row i, final_sereis is still NA and count >1
-        if pivot_df_current_4.loc[i, 'country'] == pivot_df_current_4.loc[i + 1, 'country'] and pd.notna(pivot_df_current_4.loc[i + 1, 'final_series']): # if same country for row i and i+1 & row I+1 is not NA
+    if (pd.isna(pivot_df_current_4.loc[i, 'final_series'])) & (pivot_df_current_4.loc[i, 'count'] > 1): # if in row i, final_sereis is still NA and count >1
+        if (pivot_df_current_4.loc[i, 'country'] == pivot_df_current_4.loc[i + 1, 'country']) & (pd.notna(pivot_df_current_4.loc[i + 1, 'final_series'])): # if same country for row i and i+1 & row I+1 is not NA
             next_col = pivot_df_current_4.loc[i + 1, 'final_series']
-            if pivot_df_current_4.loc[i, next_col] == 1 and pivot_df_current_4.loc[i + 1, next_col] == 1:
+            if pivot_df_current_4.loc[i, next_col] == 1:
                 pivot_df_current_4.loc[i, 'final_series'] = next_col
 
 
 # Backward checking with previous row, if final_sereis is still NA, if same country and the previous row has a series choosen, then use the same sereis if also have the same sereis..
 for i in range(1, len(pivot_df_current_4)):
-    if pd.isna(pivot_df_current_4.loc[i, 'final_series']) and pivot_df_current_4.loc[i, 'count'] > 1:
-        if pivot_df_current_4.loc[i, 'country'] == pivot_df_current_4.loc[i - 1, 'country'] and pd.notna(pivot_df_current_4.loc[i - 1, 'final_series']):
+    if (pd.isna(pivot_df_current_4.loc[i, 'final_series'])) & (pivot_df_current_4.loc[i, 'count'] > 1):
+        if (pivot_df_current_4.loc[i, 'country'] == pivot_df_current_4.loc[i - 1, 'country']) & (pd.notna(pivot_df_current_4.loc[i - 1, 'final_series'])):
             prev_col = pivot_df_current_4.loc[i - 1, 'final_series']
             # Check if both this and previous row have 1 in the same column
             if pivot_df_current_4.loc[i, prev_col] == 1:
                 pivot_df_current_4.loc[i, 'final_series'] = prev_col
 
 # Check for NAs
-#print(pivot_df_current_4.head(10))
+print(pivot_df_current_4.head(10))
 na_count = pivot_df_current_4['final_series'].isna().sum()
 print(f' The number of NA  in column final_series is {na_count}')
 # 10 NA when checking both next and previous rows.
@@ -101,14 +101,24 @@ print(pivot_df_current_4['n_series'].describe())
 # There are several countries that has switches. n_series has value over 1 (2 or 3 here).
 distribution = pivot_df_current_4.drop_duplicates('country')['n_series'].value_counts()
 print(distribution)
-# 90 countries has no switch. 18 countries have 1 switch. 1 country has 2 switch.
-# check for final result against it (should have 20 new lines added).
+# 76 countries has no switch. 13 countries have 1 switch. 1 country has 2 switch.
+# check for final result against it (should have 15 new lines added).
 print(pivot_df_current_4.tail(10))
+# 1513 lines now
 
+# Add a column 'switch' to show if there's a switch of sereis code within one country.
+pivot_df_current_4['switch'] = None
+for i in range(1, len(pivot_df_current_4)):
+    if (pivot_df_current_4.loc[i, 'country'] == pivot_df_current_4.loc[i-1, 'country']) & (pivot_df_current_4.loc[i, 'final_series'] != pivot_df_current_4.loc[i - 1, 'final_series']): # same country, different series
+        pivot_df_current_4.loc[i-1, 'switch'] = True
+        pivot_df_current_4.loc[i, 'switch'] = True
+
+
+# Add a column 'overlap' to show if for each switch, there's an overlap row can be added.
 pivot_df_current_4['overlap'] = None
 # From bottom up. for the same country, if final_series are different for row i and i+1
 for i in range(len(pivot_df_current_4) - 2, -1, -1):  # start from second last one to the first row
-    if pivot_df_current_4.loc[i, 'country'] == pivot_df_current_4.loc[i+1, 'country'] and pivot_df_current_4.loc[i, 'final_series'] != pivot_df_current_4.loc[i + 1, 'final_series']: #same country but different final_series (a switch)
+    if (pivot_df_current_4.loc[i, 'country'] == pivot_df_current_4.loc[i+1, 'country']) & (pivot_df_current_4.loc[i, 'final_series'] != pivot_df_current_4.loc[i + 1, 'final_series']): #same country but different final_series (a switch)
         this_col = pivot_df_current_4.loc[i, 'final_series']
         if pivot_df_current_4.loc[i+1, this_col] == 1:
             new_row = pivot_df_current_4.iloc[i+1].copy()
@@ -118,35 +128,43 @@ for i in range(len(pivot_df_current_4) - 2, -1, -1):  # start from second last o
             pivot_df_current_4 = pd.concat([pivot_df_current_4.iloc[:i+1], pd.DataFrame([new_row], columns=pivot_df_current_4.columns), pivot_df_current_4.iloc[i+1:]]).reset_index(drop=True)
 
 print(pivot_df_current_4.tail(10))
-#1908 rows - 1889 rows = 19 rows added
+#1527 rows - 1513 rows = 14 rows added
 #still missing 1 row. Needs to check the missing part.
 
+# Find out for which country there is switch but no overlap.
 filtered_df = pivot_df_current_4[pivot_df_current_4['n_series']>1]
 result = filtered_df.groupby('country').apply(lambda g: g['overlap'].isna().all())
+# Got a silence warning: DeprecationWarning: DataFrameGroupBy.apply operated on the grouping columns. This behavior is deprecated, and in a future version of pandas the grouping columns will be excluded from the operation. Either pass `include_groups=False` to exclude the groupings or explicitly select the grouping columns after groupby to silence this warning.
+# So in the future, this line might need to be updated to the following one.
+# result = filtered_df.groupby('country', include_groups=False).apply(lambda g: g['overlap'].isna().all())
+
 filtered_countries = result[result].index.tolist()
 print(f'countries with switch but do not have overlap lines: {filtered_countries}.')
-# countries with switch but do not have overlap lines: ['Malta'].
+# countries with switch but do not have overlap lines: ['Ghana'].
+# Not malta, but Ghana
 
-overlap_check = pivot_df_current_4[pivot_df_current_4['country']=='Malta']
+overlap_check = pivot_df_current_4[pivot_df_current_4['country']=='Ghana']
 print(overlap_check)
-# No overlap. From 2001 to 2013, final series is 300. IN 2014, final series is 1000.
-# Drop year 2014.
-index_to_drop = pivot_df_current_4[(pivot_df_current_4['country']=='Malta') & (pivot_df_current_4['year']==2014)].index
-pivot_df_current_4.drop(index_to_drop, inplace=True)
+overlap_check.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/un4_current_overlap.csv")
 
-overlap_check = pivot_df_current_4[pivot_df_current_4['country']=='Malta']
-print(overlap_check)
-
-# column n_series can also be changed to 1. Update the calulation of n_series.
-pivot_df_current_4['n_series'] = pivot_df_current_4.groupby('country')['final_series'].transform('nunique')
-
-overlap_check = pivot_df_current_4[pivot_df_current_4['country']=='Malta']
-print(overlap_check)
-
-pivot_df_current_4['final_series'] = pivot_df_current_4['final_series'].astype(int)
-pivot_df_current_4.reset_index(drop=True, inplace=True)
-print(pivot_df_current_4.tail(10))
-
+# # No overlap. From 2006 to 2012, final series is 100. From 2013 to 2021, final series is 1000.
+# # Drop parts of them or keep?
+# index_to_drop = pivot_df_current_4[(pivot_df_current_4['country']=='Ghana') & (pivot_df_current_4['year']==2014)].index
+# pivot_df_current_4.drop(index_to_drop, inplace=True)
+#
+# overlap_check = pivot_df_current_4[pivot_df_current_4['country']=='Malta']
+# print(overlap_check)
+#
+# # column n_series can also be changed to 1. Update the calulation of n_series.
+# pivot_df_current_4['n_series'] = pivot_df_current_4.groupby('country')['final_series'].transform('nunique')
+#
+# overlap_check = pivot_df_current_4[pivot_df_current_4['country']=='Malta']
+# print(overlap_check)
+#
+# pivot_df_current_4['final_series'] = pivot_df_current_4['final_series'].astype(int)
+# pivot_df_current_4.reset_index(drop=True, inplace=True)
+# print(pivot_df_current_4.tail(10))
+#
 ### Gap check
 pivot_df_current_4 = pivot_df_current_4.sort_values(by=['country','year'])
 pivot_df_current_4['year_diff'] = pivot_df_current_4.groupby('country')['year'].diff()
@@ -154,17 +172,32 @@ pivot_df_current_4['has_gap'] = pivot_df_current_4['year_diff']>1
 countries_with_gaps = pivot_df_current_4[pivot_df_current_4['has_gap']]['country'].unique()
 num_countries_with_gaps = len(countries_with_gaps)
 print(f' There are {num_countries_with_gaps} countries have year gaps, including: {countries_with_gaps}')
-#There are 4 countries have year gaps, including: ['Iran, Islamic Rep.' 'Mauritania' 'Namibia' 'Rwanda']
+#There are 3 countries have year gaps, including: ['Iran, Islamic Rep.' 'Mauritania' 'Rwanda']
 
-pivot_df_current_4.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/current_4_4final.csv")
+df_gap_current4 = pivot_df_current_4[pivot_df_current_4['country'].isin(countries_with_gaps)]
+df_gap_current4.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/un4_current_gap.csv")
+# Need mannul check
 
-df_current_4_final = pivot_df_current_4[['country','year','final_series','overlap']]
+# Final Data Clean and Export
+
+# Merge the iso3
+iso_mapping = pd.read_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/iso_mapping.csv")
+pivot_df_current_4 = pd.merge(pivot_df_current_4, iso_mapping, on='country', how='left')
+
+pivot_df_current_4['final_series'] = pivot_df_current_4['final_series'].astype(int)
+pivot_df_current_4.reset_index(drop=True, inplace=True)
+print(pivot_df_current_4.tail(10))
+
+pivot_df_current_4.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/un4_current_4final.csv")
+
+df_current_4_final = pivot_df_current_4[['country','year','final_series','overlap','iso3']]
 print(df_current_4_final.head())
-df_current_4_final.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Final/current_4_final.csv")
+df_current_4_final.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Final/un4_current_final.csv")
 
 
 
 #### NEED to check for the gap country question.
+#### Overlap issue has not been dropped yet.
 
 
 
