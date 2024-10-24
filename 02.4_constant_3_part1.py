@@ -10,23 +10,23 @@ filepath_constant_3 = "/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Data_orig
 df_constant_3 = pd.read_csv(filepath_constant_3)
 print(df_constant_3.head())
 
-##########Step 2. Sector check
-##### Transforme the original dataset
+#######################################################################################################################
+############################### Sector check ##########################################################################
+####### Transforme the original dataset
 
-#Create a pivot table for the values, all sectors became column numbers
+### Create a pivot table for the values, all sectors became column numbers
 pivot_df_constant_3 = df_constant_3.pivot_table(index=['country','year','series_code','base'], columns='code', values = 'value')
 print(pivot_df_constant_3.head(10))
 
-#Reset the index to make 'country','year','series_code' into columns
+### Reset the index to make 'country','year','series_code' into columns
 pivot_df_constant_3.reset_index(inplace=True)
 print(pivot_df_constant_3.head(10))
 
-###Data cleaning
+### Data cleaning for ISICC3
 pivot_df_constant_3 = pivot_df_constant_3.drop(['1','2','60-63','64','D.21','D.21-D.31','D.31','P.119'], axis=1)
-print(pivot_df_constant_3.tail())
+#print(pivot_df_constant_3.tail())
 
-# If A and B both have value, then keep them, let A+B become NA. If not, then keep A+B, let A and B both become NA. Same for G+H, J+K.
-
+## If A and B both have value, then keep them, let A+B become NA. If not, then keep A+B, let A and B both become NA. Same for G+H, J+K.
 # Function to apply for that.
 def update_dataframe(df, col1, col2, col_sum):
     """
@@ -50,6 +50,8 @@ pivot_df_constant_3 = update_dataframe(pivot_df_constant_3, 'A', 'B', 'A+B')
 pivot_df_constant_3 = update_dataframe(pivot_df_constant_3, 'G', 'H', 'G+H')
 pivot_df_constant_3 = update_dataframe(pivot_df_constant_3, 'J', 'K', 'J+K')
 
+## Similarly, for M, N, and O
+# Function for three columns and its sum
 def update_dataframe3(df, col1, col2, col3, col_sum):
     """
     Conditionally updates the 'col_sum' column based on the non-NA status of 'col1' and 'col2' and 'col3'.
@@ -69,7 +71,7 @@ def update_dataframe3(df, col1, col2, col3, col_sum):
 
 # Apply function
 pivot_df_constant_3 = update_dataframe3(pivot_df_constant_3, 'M', 'N', 'O','M+N+O')
-print(pivot_df_constant_3.tail())
+#print(pivot_df_constant_3.tail())
 
 ### Add columns to check if there's any sectors missing.
 ## First figure out if AB, GH, JK are missing
@@ -124,8 +126,16 @@ pivot_df_constant_3['missing_any_sector'] = pivot_df_constant_3.iloc[:, -5:].any
 #print(pivot_df_constant_3.head(10))
 #print(pivot_df_constant_3.tail(10))
 
+### put all missing sectors into a new column
+'''Define a function to find missing sectors (columns)'''
+def missing_column(row):
+    return ', '.join(row.index[row.isna()])
 
-###Aggregate the footnote colum to check for any footnotes
+pivot_df_constant_3['sector_missing']= pivot_df_constant_3.loc[:, 'A':'P'].apply(missing_column, axis=1)
+print(pivot_df_constant_3.head(10))
+
+
+### Aggregate the footnote colum to check for any footnotes
 #print(df_constant_3['note'].dtype) #object
 footnotes = df_constant_3.groupby(['country','year','series_code','base'])['note'].agg(lambda x: ', '.join(set(y for y in x if pd.notna(y) and y != '')))
 
@@ -140,14 +150,6 @@ mapping_part = df_constant_3[['country','part']].drop_duplicates(subset='country
 #print(mapping_part)
 pivot_df_constant_3 = pd.merge(pivot_df_constant_3,mapping_part,on='country',how='left')
 
-# put all missing sectors into a new column
-'''Define a function to find missing sectors (columns)'''
-def missing_column(row):
-    return ', '.join(row.index[row.isna()])
-
-pivot_df_constant_3['sector_missing']= pivot_df_constant_3.loc[:, 'A':'P'].apply(missing_column, axis=1)
-print(pivot_df_constant_3.head(10))
-
 
 ### calculate the discard score
 columns_to_sum = list(range(4,7))+list(range(9,26))
@@ -157,44 +159,10 @@ pivot_df_constant_3['discard'] = (pivot_df_constant_3['score']-0.005)>=0
 print(pivot_df_constant_3.head(10))
 
 
-# if b.1g is missing and b.1*g is missing, do not discard. (discard = false)
-for index in range(len(pivot_df_constant_3)):
-    if pd.isna(pivot_df_constant_3.loc[index, 'B.1g']) and pd.isna(pivot_df_constant_3.loc[index, 'B.1*g']):  # Check if the value in A is NaN (or None)
-        pivot_df_constant_3.loc[index, 'discard'] = False     # Set B to False if A is empty
-
-# if b.1g is missing, but b.1*g is not missing. check for footnotes of other sectors.
-# If footnotes are related to tax and subsidy add or minus, then we can still use 0.005.
-# if no footnotes or footnotes not related to correct ones, we can use 10%
-# To check the footnote, not only needs to check the footnote columns, also need to check the part column.
-
-#filtered_df_1 = pivot_df_constant_3[pd.isna(pivot_df_constant_3['B.1g']) & pd.notna(pivot_df_constant_3['B.1*g']) & pd.notna(pivot_df_constant_3['Footnotes'])]
-filtered_df = pivot_df_constant_3[pd.isna(pivot_df_constant_3['B.1g']) & pd.notna(pivot_df_constant_3['B.1*g'])]
-#print(filtered_df_1) #258 rows *32 columns
-print(filtered_df) #258 rows *32 columns
-# pd.notna(pivot_df_constant_3['Footnotes'] seems not work
-
-filtered_df.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/un3_constant_filtered_for_b1g.csv")
-# Need to check manually for the footnote.
-
-# Went through the file and did not see the related footnote. So will use b1*g and 10%.
-# Also, when sum_of_sector equals to zero, discard.
-pivot_df_constant_3['score*'] = None
-for index in range(len(pivot_df_constant_3)):
-    pivot_df_constant_3['score*'] = (
-            (pivot_df_constant_3['sum_of_sector'] - pivot_df_constant_3['B.1*g']) / pivot_df_constant_3[
-        'B.1*g']).abs()
-    if pd.isna(pivot_df_constant_3.loc[index, 'B.1g']) and pd.notna(pivot_df_constant_3.loc[index, 'B.1*g']):
-        pivot_df_constant_3.loc[index, 'discard'] = (pivot_df_constant_3.loc[index, 'score*'] - 0.1) >= 0
-    if pivot_df_constant_3.loc[index, 'sum_of_sector'] ==0:  # meaning no sector value at all. This only happens in ISICC3 files.
-        pivot_df_constant_3.loc[index, 'discard'] = True
-
-# #pivot_df_constant_3.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/constant_3_try.csv")
-#
-#
 ### FISIM
-# There are two types of FISIM related footnotes, one type notes FISIM is included, the other type notes FISIM is excluded.
-
+## There are two types of FISIM related footnotes, one type notes FISIM is included, the other type notes FISIM is excluded.
 ## Add a column FISIM, to show whether FISIM is included for B1g or excluded from B1g.
+# This fisim csv file was manully created based on the footnote file.
 df_constant_3_fisim = pd.read_csv('/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/constant_3_fisim.csv')
 
 # Convert 'note_code' to string in df2 for easier inclusion checks
@@ -234,37 +202,69 @@ for index in range(len(pivot_df_constant_3)):
 
 #print(pivot_df_constant_3.head(10))
 
+### b1.g and b1*g missing issues
+# if b.1g is missing and b.1*g is missing, do not discard. (discard = false)
+for index in range(len(pivot_df_constant_3)):
+    if pd.isna(pivot_df_constant_3.loc[index, 'B.1g']) and pd.isna(pivot_df_constant_3.loc[index, 'B.1*g']):
+        pivot_df_constant_3.loc[index, 'discard'] = False
 
-# Save a copy of current discard column, without considering the number of sectors. (P can be missing)
-pivot_df_constant_3['discard_nc_Nsector'] = pivot_df_constant_3['discard']
+# if b.1g is missing, but b.1*g is not missing. check for footnotes of other sectors.
+# If footnotes are related to tax and subsidy add or minus, then we can still use 0.005.
+# if no footnotes or footnotes not related to correct ones, we can use 10%
+# To check the footnote, not only needs to check the footnote columns, also need to check the part column.
+
+#filtered_df_1 = pivot_df_constant_3[pd.isna(pivot_df_constant_3['B.1g']) & pd.notna(pivot_df_constant_3['B.1*g']) & pd.notna(pivot_df_constant_3['Footnotes'])]
+filtered_df = pivot_df_constant_3[pd.isna(pivot_df_constant_3['B.1g']) & pd.notna(pivot_df_constant_3['B.1*g'])]
+#print(filtered_df_1) #258 rows *32 columns
+print(filtered_df) #258 rows *32 columns
+# pd.notna(pivot_df_constant_3['Footnotes'] seems not work
+
+filtered_df.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/un3_constant_b1g.csv")
+# Need to check manually for the footnote.
+
+# Went through the file and did not see the related footnote. So will use b1*g and 10%.
+# Also, when sum_of_sector equals to zero, discard.
+pivot_df_constant_3['score*'] = None
+for index in range(len(pivot_df_constant_3)):
+    pivot_df_constant_3['score*'] = (
+            (pivot_df_constant_3['sum_of_sector'] - pivot_df_constant_3['B.1*g']) / pivot_df_constant_3[
+        'B.1*g']).abs()
+    if pd.isna(pivot_df_constant_3.loc[index, 'B.1g']) and pd.notna(pivot_df_constant_3.loc[index, 'B.1*g']):
+        pivot_df_constant_3.loc[index, 'discard'] = (pivot_df_constant_3.loc[index, 'score*'] - 0.1) >= 0
+    if pivot_df_constant_3.loc[index, 'sum_of_sector'] ==0:  # meaning no sector value at all. This only happens in ISICC3 files.
+        pivot_df_constant_3.loc[index, 'discard'] = True
+
+# #pivot_df_constant_3.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/constant_3_try.csv")
+
+
+### Save a copy of current discard column, only considering the scores, without considering the number of sectors. (P can be missing)
+pivot_df_constant_3['discard_on_score'] = pivot_df_constant_3['discard']
 
 # If there is any missing sector, then discard. Otherwise,  do not discard.
 conditions = pivot_df_constant_3['missing_any_sector'] == True
+pivot_df_constant_3['discard_on_sector'] = conditions
 pivot_df_constant_3.loc[conditions, 'discard'] = True
 print(pivot_df_constant_3.head(10))
 
-### Final Data Clean and Export
-# reset year and series into integer
+
+#######################################################################################################################
+################# Final Data Clean and Export
+
+# Our period of interest is 1990 – 2023.
+pivot_df_constant_3 = pivot_df_constant_3[(pivot_df_constant_3['year']>=1990) & (pivot_df_constant_3['year']<=2023)]
+
+# Reset year and series into integer
 pivot_df_constant_3['year'] = pivot_df_constant_3['year'].astype(int)
 pivot_df_constant_3['series_code'] = pivot_df_constant_3['series_code'].astype(int)
 #print(pivot_df_constant_3.head(10))
 
-#Our period of interest is 1990 – 2023.
-pivot_df_constant_3 = pivot_df_constant_3[(pivot_df_constant_3['year']>=1990) & (pivot_df_constant_3['year']<=2023)]
-
 # Merge iso3
-iso_mapping_current_3 = pd.read_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/iso_mapping_current_3.csv")
-pivot_df_constant_3 = pd.merge(pivot_df_constant_3, iso_mapping_current_3, on='country', how='left')
+iso_mapping_un3 = pd.read_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/iso_mapping_un3.csv")
+pivot_df_constant_3 = pd.merge(pivot_df_constant_3, iso_mapping_un3, on='country', how='left')
 
-#export the pivot table dataframe to a csv file
+# Export the pivot table dataframe to a csv file
 print(pivot_df_constant_3.head(10))
 pivot_df_constant_3.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/un3_constant_Sectorvalue.csv")
-
-# Keep only those not discarded.
-df_constant_3_int = pivot_df_constant_3[pivot_df_constant_3['discard']== False]
-#df_constant_3_int.drop(columns='discard', inplace=True)
-print(df_constant_3_int.head(10))
-df_constant_3_int.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/un3_constant_intermediate.csv")
 
 # Keep those discarded in a seperate file
 df_constant_3_int_discard = pivot_df_constant_3[pivot_df_constant_3['discard'] == True]
@@ -272,12 +272,28 @@ df_constant_3_int_discard = pivot_df_constant_3[pivot_df_constant_3['discard'] =
 print(df_constant_3_int_discard.head(10))
 df_constant_3_int_discard.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/un3_constant_intermediate_discard.csv")
 
-# Export a file that only contains country, year, series_code, and iso3.
-#df_constant_3_int = df_constant_3_int.iloc[:,0:4]
-df_constant_3_int = pd.concat([df_constant_3_int.iloc[:,0:4],df_constant_3_int.iloc[:,-1: ]], axis=1)
+
+# Keep only those not discarded.
+df_constant_3_int = pivot_df_constant_3[pivot_df_constant_3['discard']== False]
+df_constant_3_int.drop(columns='discard', inplace=True)
+print(df_constant_3_int.tail(10))
+
+# Keep only columns interested.
+columns_to_keep = ['country', 'iso3', 'year','base','series_code','Footnotes','part','sector_missing','score','discard_on_score', 'discard_on_sector']
+df_constant_3_int = df_constant_3_int.loc[:, columns_to_keep]
+df_constant_3_int.reset_index(inplace=True, drop=True)
+print(df_constant_3_int.tail(10))
+
+df_constant_3_int.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/un3_constant_intermediate.csv")
+
+
+# Export a file that only contains country, year, base, series_code, and iso3.
+df_constant_3_int = df_constant_3_int.iloc[:,0:5]
+#df_constant_3_int = pd.concat([df_constant_3_int.iloc[:,0:4],df_constant_3_int.iloc[:,-1: ]], axis=1)
 print(df_constant_3_int.head())
-df_constant_3_int.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/un3_constant_5cols.csv")
+df_constant_3_int.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/un3_constant_part1.csv")
+
+
 
 # # ### issues:
 # # ###1) GDP footntoes
-# # ###2) FISIM not appliaed yet.

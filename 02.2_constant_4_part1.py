@@ -135,18 +135,18 @@ df_constant_4_int.drop(columns='discard', inplace=True)
 print(df_constant_4_int.head(10))
 
 # Keep only columns interested.
-columns_to_keep = ['country', 'iso3', 'year','series_code','Footnotes','sector_missing','score','discard_on_score', 'discard_on_sector']
+columns_to_keep = ['country', 'iso3', 'year','base', 'series_code','Footnotes','sector_missing','score','discard_on_score', 'discard_on_sector']
 df_constant_4_int = df_constant_4_int.loc[:, columns_to_keep]
 df_constant_4_int.reset_index(inplace=True, drop=True)
 print(df_constant_4_int.tail(10))
 df_constant_4_int.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/un4_constant_intermediate.csv")
 
 
-# Export a file that only contains country, year, series_code, and iso3.
+# Export a file that only contains country, year, series_code, base, and iso3.
 #df_constant_4_int = pd.concat([df_constant_4_int.iloc[:,0:4],df_constant_4_int.iloc[:,-1: ]], axis=1)
-df_constant_4_int = df_constant_4_int.iloc[:,0:4]
+df_constant_4_int = df_constant_4_int.iloc[:,0:5]
 print(df_constant_4_int.head())
-df_constant_4_int.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/un4_constant_4cols.csv")
+df_constant_4_int.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/un4_constant_part1.csv")
 
 #small issues:
 ## Footnote 42, 48, and 49 (Refers to GDP) checked.

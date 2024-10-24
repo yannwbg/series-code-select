@@ -131,7 +131,7 @@ df_current_4_int_discard.reset_index(inplace=True, drop=True)
 print(df_current_4_int_discard.tail(10))
 df_current_4_int_discard.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/un4_current_intermediate_discard.csv")
 
-# Keep only those not discarded.
+## Keep only those not discarded.
 df_current_4_int = pivot_df_current_4[pivot_df_current_4['discard']== False]
 df_current_4_int.drop(columns='discard', inplace=True)
 print(df_current_4_int.tail(10))
@@ -147,7 +147,7 @@ df_current_4_int.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process
 # Export a file that only contains country, year, series_code, and iso3.
 df_current_4_int = df_current_4_int.iloc[:,0:4]
 print(df_current_4_int.head())
-df_current_4_int.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/un4_current_4cols.csv")
+df_current_4_int.to_csv("/Users/Danjing 1/Lingsu/Jobs/2024 WB STC/Sector/Process/un4_current_part1.csv")
 
 # ###small issues:
 ###1)Footnote 42 & 43 Refers to Gross Domestic Product. Philippines: For B.1g marked 42 & 43, the other sectors marked 19. However, for series 100, 2000-2012, sector D 2001-2008 marked 1, all other sectors has no footnote.
